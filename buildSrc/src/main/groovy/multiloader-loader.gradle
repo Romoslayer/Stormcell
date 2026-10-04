@@ -1,0 +1,19 @@
+plugins {
+    id 'multiloader-common'
+}
+
+// The loader projects compile Common's sources and ship its resources themselves, so each jar is self-contained
+evaluationDependsOn(':Common')
+def common = project(':Common')
+
+dependencies {
+    compileOnly common
+}
+
+tasks.named('compileJava', JavaCompile) {
+    source(common.sourceSets.main.allSource)
+}
+
+processResources {
+    from(common.sourceSets.main.resources)
+}

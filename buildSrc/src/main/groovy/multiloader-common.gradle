@@ -1,0 +1,63 @@
+plugins {
+    id 'java-library'
+}
+
+version = "${mod_version}+${mc_version}"
+group = project.group
+
+base {
+    archivesName = "${mod_id}-${project.name.toLowerCase()}"
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version)
+}
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = java_version as int
+}
+
+jar {
+    from(rootProject.file('LICENSE')) {
+        rename { "${it}_${mod_id}" }
+    }
+    manifest {
+        attributes([
+                'Specification-Title'   : mod_id,
+                'Specification-Vendor'  : mod_author,
+                'Specification-Version' : '1',
+                'Implementation-Title'  : mod_name,
+                'Implementation-Version': project.version,
+                'Implementation-Vendor' : mod_author,
+                'Built-On-Minecraft'    : mc_version
+        ])
+    }
+}
+
+processResources {
+    // NeoForge pins its first two version components to the game's, so one range covers both
+    def mcParts = mc_version.tokenize('.')
+    def nextMinecraft = "${mcParts[0]}.${(mcParts[1] as int) + 1}"
+    def expandProps = [
+            version              : project.version.toString(),
+            mod_id               : mod_id,
+            mod_name             : mod_name,
+            mod_author           : mod_author,
+            mod_description      : mod_description,
+            license              : license,
+            mc_version           : mc_version,
+            neoforge_range       : "[${mc_version},${nextMinecraft})",
+            fabric_loader_version: fabric_loader_version,
+            fabric_api_version   : fabric_api_version,
+            java_version         : java_version
+    ]
+    inputs.properties(expandProps)
+    filesMatching(['META-INF/neoforge.mods.toml', 'fabric.mod.json', 'pack.mcmeta']) {
+        expand expandProps
+    }
+}

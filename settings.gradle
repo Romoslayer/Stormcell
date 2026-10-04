@@ -1,0 +1,35 @@
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        maven {
+            name = 'NeoForged'
+            url = 'https://maven.neoforged.net/releases'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'stormcell'
+include('Common', 'Fabric', 'NeoForge')
+
+// One source tree builds every supported game version. The default is 26.3; build 26.2 with
+//   gradlew build -Pmc=26.2
+// Everything that differs between versions lives in versions/<mc>.properties.
+def mc = providers.gradleProperty('mc').getOrElse('26.3')
+def versionFile = file("versions/${mc}.properties")
+if (!versionFile.isFile()) {
+    throw new GradleException("Unsupported Minecraft version '${mc}': ${versionFile} does not exist")
+}
+def versionProps = new Properties()
+versionFile.withInputStream { versionProps.load(it) }
+gradle.beforeProject { project ->
+    versionProps.each { key, value -> project.ext.set(key as String, value) }
+}

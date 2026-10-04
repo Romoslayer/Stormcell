@@ -1,0 +1,92 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+    id 'net.neoforged.moddev' version "${moddev_version}" apply false
+}
+
+tasks.register('build') {
+    group = 'build'
+    description = 'Builds the Fabric and NeoForge jars for the selected Minecraft version (-Pmc=26.2 or 26.3).'
+    dependsOn ':Common:test', ':Fabric:build', ':NeoForge:build'
+}
+
+tasks.register('clean', Delete) {
+    delete layout.buildDirectory
+}
+
+// ---- gradlew runVanillaClient [-Pmc=26.2]: the official, unmodded game, started the way the Minecraft launcher starts
+// it and sent straight to a server on localhost:25565 (or -PvanillaServer=host:port; the dev servers use 25599 for
+// Fabric and 25598 for NeoForge). Shows
+// what players without the mod see. Game files come from your launcher installation or Gradle's cache and are each
+// checked against the SHA-1 Mojang lists for them. Plays offline as "Visitor" in its own folder (build/run/vanilla-<mc>);
+// -PvanillaName=<name> starts another player (folder build/run/vanilla-<mc>-<name>), so several clients can join at once.
+def minecraftDir = new File(System.getenv('APPDATA') ?: System.getProperty('user.home'), '.minecraft')
+def gradleCaches = new File(gradle.gradleUserHomeDir, 'caches')
+def sha1 = { File file -> java.security.MessageDigest.getInstance('SHA-1').digest(file.bytes).encodeHex().toString() }
+
+def officialFile = { String what, String expectedSha1, List<File> candidates ->
+	def file = candidates.find { it.isFile() && sha1(it) == expectedSha1 }
+	if (!file) throw new GradleException("Found no official copy of ${what} (SHA-1 ${expectedSha1}) in ${candidates}")
+	file
+}
+
+// Whether a library or argument applies on 64-bit Windows
+def appliesHere = { List rules ->
+	if (!rules) return true
+	def allowed = false
+	rules.each { rule ->
+		def os = rule.os ?: [:]
+		if (!rule.features && !os.arch && (!os.name || os.name == 'windows')) allowed = rule.action == 'allow'
+	}
+	allowed
+}
+
+tasks.register('runVanillaClient') {
+	group = 'verification'
+	description = 'Starts the official, unmodded Minecraft client and joins localhost:25565.'
+	doLast {
+		def version = mc_version
+		def playerName = providers.gradleProperty('vanillaName').getOrElse('Visitor')
+		def gameDir = layout.buildDirectory.dir("run/vanilla-${version}" + (playerName == 'Visitor' ? '' : "-${playerName}")).get().asFile
+		def versionFile = new File(minecraftDir, "versions/${version}/${version}.json")
+		if (!versionFile.isFile()) throw new GradleException("Minecraft ${version} is not in your launcher: ${versionFile} is missing")
+		def info = new groovy.json.JsonSlurper().parse(versionFile)
+
+		def classpath = info.libraries.findAll { appliesHere(it.rules) && it.downloads?.artifact }.collect { library ->
+			def artifact = library.downloads.artifact
+			def (group, name, libraryVersion) = library.name.split(':')
+			def fileName = artifact.path.split('/').last()
+			def cached = new File(gradleCaches, "modules-2/files-2.1/${group}/${name}/${libraryVersion}").listFiles()?.collect { new File(it, fileName) } ?: []
+			officialFile(library.name, artifact.sha1, [new File(minecraftDir, "libraries/${artifact.path}")] + cached)
+		}
+		classpath << officialFile("Minecraft ${version}", info.downloads.client.sha1,
+				[new File(minecraftDir, "versions/${version}/${version}.jar"), new File(gradleCaches, "fabric-loom/${version}/minecraft-client.jar")])
+
+		def gradleInfo = new File(gradleCaches, "fabric-loom/${version}/mojang_minecraft_info.json")
+		def assetSha1s = [info.assetIndex.sha1] + (gradleInfo.isFile() ? [new groovy.json.JsonSlurper().parse(gradleInfo).assetIndex.sha1] : [])
+		def assets = [[new File(minecraftDir, 'assets'), info.assetIndex.id], [new File(gradleCaches, 'fabric-loom/assets'), "${version}-${info.assetIndex.id}"]]
+				.find { root, index -> def file = new File(root, "indexes/${index}.json"); file.isFile() && sha1(file) in assetSha1s }
+		if (!assets) throw new GradleException("Found no official copy of the ${version} asset index (SHA-1 ${assetSha1s.join(' or ')})")
+
+		def jvmArgs = info.arguments.jvm.findAll { it instanceof String || appliesHere(it.rules) }
+				.collectMany { it instanceof String ? [it] : [it.value].flatten() }
+				.collect {
+					it.replace('${natives_directory}', new File(gameDir, 'natives').path).replace('${launcher_name}', 'stormcell-test')
+							.replace('${launcher_version}', '1').replace('${classpath}', classpath*.path.join(File.pathSeparator))
+				}
+		def offlineUuid = UUID.nameUUIDFromBytes("OfflinePlayer:${playerName}".getBytes('UTF-8')).toString().replace('-', '')
+		def gameArgs = ['--username', playerName, '--version', version, '--gameDir', gameDir.path, '--assetsDir', assets[0].path,
+				'--assetIndex', assets[1], '--uuid', offlineUuid, '--accessToken', '0', '--versionType', 'release',
+				'--width', '1280', '--height', '720', '--quickPlayMultiplayer', providers.gradleProperty('vanillaServer').getOrElse('localhost:25565')]
+
+		gameDir.mkdirs()
+		def options = new File(gameDir, 'options.txt')
+		if (!options.isFile()) {
+			options.text = ['onboardAccessibility:false', 'skipMultiplayerWarning:true', 'joinedFirstServer:true', 'tutorialStep:none',
+					'pauseOnLostFocus:false', 'soundCategory_master:0.0'].join('\n')
+		}
+		def javaHome = new File(System.getProperty('java.home'), 'bin/java')
+		// Output goes to a file: inheriting the Gradle daemon's output would stall the game once that pipe fills up
+		new ProcessBuilder(([javaHome.path, '-Xmx2G'] + jvmArgs + [info.mainClass] + gameArgs)*.toString()).directory(gameDir)
+				.redirectErrorStream(true).redirectOutput(new File(gameDir, 'client-output.log')).start().waitFor()
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "dev.romoslayer.stormcell.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"BeeMixin",
+		"BeePollinateGoalMixin",
+		"BeehiveBlockEntityMixin",
+		"FireBlockMixin",
+		"FoxMixin",
+		"FoxSeekShelterGoalMixin",
+		"LevelMixin",
+		"MonsterMixin",
+		"PandaMixin",
+		"PlayerListMixin",
+		"PlayerMixin",
+		"ServerCommonPacketListenerMixin",
+		"ServerLevelInvoker",
+		"ServerLevelMixin",
+		"WeatherCheckMixin",
+		"WeatherCommandMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
