@@ -1,12 +1,13 @@
 plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
     id 'net.neoforged.moddev' version "${moddev_version}" apply false
+    id 'net.minecraftforge.gradle' version "${forgegradle_version}" apply false
 }
 
 tasks.register('build') {
     group = 'build'
-    description = 'Builds the Fabric and NeoForge jars for the selected Minecraft version (-Pmc=26.2 or 26.3).'
-    dependsOn ':Common:test', ':Fabric:build', ':NeoForge:build'
+    description = 'Builds the Fabric, NeoForge and Forge jars for the selected Minecraft version (-Pmc=26.2 or 26.3).'
+    dependsOn ':Common:test', ':Fabric:build', ':NeoForge:build', ':Forge:build'
 }
 
 tasks.register('clean', Delete) {

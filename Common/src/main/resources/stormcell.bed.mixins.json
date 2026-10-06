@@ -1,10 +1,10 @@
 {
 	"required": true,
 	"minVersion": "0.8",
-	"package": "dev.romoslayer.stormcell.fabric.mixin",
+	"package": "dev.romoslayer.stormcell.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"ServerPlayerMixin"
+		"PlayerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

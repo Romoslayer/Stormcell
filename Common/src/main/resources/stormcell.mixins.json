@@ -2,7 +2,7 @@
 	"required": true,
 	"minVersion": "0.8",
 	"package": "dev.romoslayer.stormcell.mixin",
-	"compatibilityLevel": "JAVA_25",
+	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"BeeMixin",
 		"BeePollinateGoalMixin",
@@ -14,7 +14,6 @@
 		"MonsterMixin",
 		"PandaMixin",
 		"PlayerListMixin",
-		"PlayerMixin",
 		"ServerCommonPacketListenerMixin",
 		"ServerLevelInvoker",
 		"ServerLevelMixin",

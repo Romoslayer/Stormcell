@@ -1,6 +1,6 @@
 # Stormcell
 
-Regional, moving weather for Minecraft servers (Fabric and NeoForge, Minecraft 26.2 and 26.3).
+Regional, moving weather for Minecraft servers (Fabric, NeoForge and Forge, Minecraft 26.2 and 26.3).
 
 Vanilla weather is one switch for the whole world: everyone gets rain at the same moment. Stormcell replaces that with
 storm systems that form, drift with the wind, build up, peak and fade away. It can pour on one player while another,
@@ -132,7 +132,7 @@ On the server:
 ./gradlew build
 ```
 
-Builds for 26.3; add `-Pmc=26.2` for 26.2. Jars land in `Fabric/build/libs` and `NeoForge/build/libs`. The build runs
+Builds for 26.3; add `-Pmc=26.2` for 26.2. Jars land in `Fabric/build/libs`, `NeoForge/build/libs` and `Forge/build/libs`. The build runs
 the unit tests (`Common/src/test`). Two longer runs are separate:
 
 ```bash

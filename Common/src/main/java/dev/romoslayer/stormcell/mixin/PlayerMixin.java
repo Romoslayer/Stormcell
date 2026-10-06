@@ -9,7 +9,10 @@ import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Keeps a player who went to bed during a thunderstorm from being woken straight back up by the daylight check. */
+/**
+ * Keeps a player who went to bed during a thunderstorm from being woken straight back up by the daylight check. In its
+ * own mixin config (stormcell.bed.mixins.json) because Forge replaces this check with an event (see StormcellForge).
+ */
 @Mixin(Player.class)
 abstract class PlayerMixin {
 	@WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/attribute/BedRule;canSleep(Lnet/minecraft/world/level/Level;)Z"))

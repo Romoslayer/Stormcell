@@ -13,7 +13,8 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /**
  * A bed that may be used "when dark" may be used during a thunderstorm overhead, as in a vanilla thunderstorm.
- * Fabric only: NeoForge moves this check into a lambda and offers CanPlayerSleepEvent instead (see StormcellNeoForge).
+ * Fabric only: NeoForge moves this check into a lambda and offers CanPlayerSleepEvent instead (see StormcellNeoForge), and
+ * Forge replaces it with SleepingTimeCheckEvent (see StormcellForge).
  */
 @Mixin(ServerPlayer.class)
 abstract class ServerPlayerMixin {

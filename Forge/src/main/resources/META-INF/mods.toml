@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[1,)"
+loaderVersion = "[${forge_major},)"
 license = "${license}"
 
 [[mods]]
@@ -14,22 +14,16 @@ description = '''
 ${mod_description}
 '''
 
-[[mixins]]
-config = "${mod_id}.mixins.json"
-
-[[mixins]]
-config = "${mod_id}.bed.mixins.json"
-
 [[dependencies.${mod_id}]]
-modId = "neoforge"
-type = "required"
-versionRange = "${neoforge_range}"
+modId = "forge"
+mandatory = true
+versionRange = "[${forge_major},)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
 modId = "minecraft"
-type = "required"
-versionRange = "${neoforge_range}"
+mandatory = true
+versionRange = "${forge_mc_range}"
 ordering = "NONE"
 side = "BOTH"
