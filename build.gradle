@@ -1,7 +1,7 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
     id 'net.neoforged.moddev' version "${moddev_version}" apply false
     id 'net.minecraftforge.gradle' version "${forgegradle_version}" apply false
+    id 'net.minecraftforge.jarjar' version '0.2.3' apply false
 }
 
 tasks.register('build') {
@@ -48,8 +48,11 @@ tasks.register('runVanillaClient') {
 		def version = mc_version
 		def playerName = providers.gradleProperty('vanillaName').getOrElse('Visitor')
 		def gameDir = layout.buildDirectory.dir("run/vanilla-${version}" + (playerName == 'Visitor' ? '' : "-${playerName}")).get().asFile
-		def versionFile = new File(minecraftDir, "versions/${version}/${version}.json")
-		if (!versionFile.isFile()) throw new GradleException("Minecraft ${version} is not in your launcher: ${versionFile} is missing")
+		// The launcher's version file, or the copy Fabric Loom downloaded from Mojang for the Fabric build, so a version
+		// need not be installed in the launcher (build it for Fabric first: gradlew :Fabric:downloadAssets -Pmc=<version>)
+		def gradleInfo = new File(gradleCaches, "fabric-loom/${version}/mojang_minecraft_info.json")
+		def versionFile = [new File(minecraftDir, "versions/${version}/${version}.json"), gradleInfo].find { it.isFile() }
+		if (!versionFile) throw new GradleException("Minecraft ${version} is neither in your launcher nor in Fabric Loom's cache")
 		def info = new groovy.json.JsonSlurper().parse(versionFile)
 
 		def classpath = info.libraries.findAll { appliesHere(it.rules) && it.downloads?.artifact }.collect { library ->
@@ -62,11 +65,12 @@ tasks.register('runVanillaClient') {
 		classpath << officialFile("Minecraft ${version}", info.downloads.client.sha1,
 				[new File(minecraftDir, "versions/${version}/${version}.jar"), new File(gradleCaches, "fabric-loom/${version}/minecraft-client.jar")])
 
-		def gradleInfo = new File(gradleCaches, "fabric-loom/${version}/mojang_minecraft_info.json")
 		def assetSha1s = [info.assetIndex.sha1] + (gradleInfo.isFile() ? [new groovy.json.JsonSlurper().parse(gradleInfo).assetIndex.sha1] : [])
 		def assets = [[new File(minecraftDir, 'assets'), info.assetIndex.id], [new File(gradleCaches, 'fabric-loom/assets'), "${version}-${info.assetIndex.id}"]]
 				.find { root, index -> def file = new File(root, "indexes/${index}.json"); file.isFile() && sha1(file) in assetSha1s }
-		if (!assets) throw new GradleException("Found no official copy of the ${version} asset index (SHA-1 ${assetSha1s.join(' or ')})")
+		// Mojang sometimes republishes an asset index under the same id; Loom then holds an outdated copy
+		if (!assets) throw new GradleException("Found no official copy of the ${version} asset index (SHA-1 ${assetSha1s.join(' or ')}); " +
+				"gradlew :Fabric:downloadAssets -Pmc=${version} fetches the current one")
 
 		def jvmArgs = info.arguments.jvm.findAll { it instanceof String || appliesHere(it.rules) }
 				.collectMany { it instanceof String ? [it] : [it.value].flatten() }
@@ -85,7 +89,10 @@ tasks.register('runVanillaClient') {
 			options.text = ['onboardAccessibility:false', 'skipMultiplayerWarning:true', 'joinedFirstServer:true', 'tutorialStep:none',
 					'pauseOnLostFocus:false', 'soundCategory_master:0.0'].join('\n')
 		}
-		def javaHome = new File(System.getProperty('java.home'), 'bin/java')
+		// The Java version Mojang lists for this release (1.20.1: 17, 1.21.1: 21)
+		def javaHome = project(':Common').javaToolchains.launcherFor {
+			languageVersion = JavaLanguageVersion.of(info.javaVersion?.majorVersion ?: 21)
+		}.get().executablePath.asFile
 		// Output goes to a file: inheriting the Gradle daemon's output would stall the game once that pipe fills up
 		new ProcessBuilder(([javaHome.path, '-Xmx2G'] + jvmArgs + [info.mainClass] + gameArgs)*.toString()).directory(gameDir)
 				.redirectErrorStream(true).redirectOutput(new File(gameDir, 'client-output.log')).start().waitFor()

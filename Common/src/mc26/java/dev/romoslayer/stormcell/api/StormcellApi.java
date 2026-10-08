@@ -1,10 +1,9 @@
 package dev.romoslayer.stormcell.api;
 
+import dev.romoslayer.stormcell.compat.ClimateProviderRegistry;
 import dev.romoslayer.stormcell.sim.LevelWeather;
 import dev.romoslayer.stormcell.world.RegionalWeather;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -17,31 +16,26 @@ import net.minecraft.server.level.ServerLevel;
  * {@code stormcell}) and keep them in a class that is only loaded when it is present.
  */
 public final class StormcellApi {
-	private static final Map<Identifier, ClimateModifierProvider> PROVIDERS = new LinkedHashMap<>();
-	private static volatile List<ClimateModifierProvider> providerList = List.of();
-
 	private StormcellApi() {
 	}
 
 	/** Adds (or replaces) a climate provider under the given id. */
-	public static synchronized void registerClimateProvider(Identifier id, ClimateModifierProvider provider) {
-		PROVIDERS.put(id, provider);
-		providerList = List.copyOf(PROVIDERS.values());
+	public static void registerClimateProvider(Identifier id, ClimateModifierProvider provider) {
+		ClimateProviderRegistry.register(id.toString(), provider);
 	}
 
-	public static synchronized void unregisterClimateProvider(Identifier id) {
-		PROVIDERS.remove(id);
-		providerList = List.copyOf(PROVIDERS.values());
+	public static void unregisterClimateProvider(Identifier id) {
+		ClimateProviderRegistry.unregister(id.toString());
 	}
 
 	/** Whether a provider from the given mod (by id namespace) is registered. */
-	public static synchronized boolean hasClimateProviderFrom(String namespace) {
-		return PROVIDERS.keySet().stream().anyMatch(id -> id.getNamespace().equals(namespace));
+	public static boolean hasClimateProviderFrom(String namespace) {
+		return ClimateProviderRegistry.hasProviderFrom(namespace);
 	}
 
 	/** Every registered provider, in registration order. */
 	public static List<ClimateModifierProvider> climateProviders() {
-		return providerList;
+		return ClimateProviderRegistry.providers();
 	}
 
 	/** Whether Stormcell is running the weather of this dimension (otherwise it has vanilla weather). */

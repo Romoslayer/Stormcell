@@ -1,8 +1,10 @@
 package dev.romoslayer.stormcell.world;
 
 import dev.romoslayer.stormcell.config.StormcellConfig;
+import dev.romoslayer.stormcell.mc.Versioned;
 import dev.romoslayer.stormcell.sim.LevelWeather;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -62,18 +64,18 @@ public final class RegionalWeather {
 	 * what clients draw.
 	 */
 	public static Biome.Precipitation precipitationType(Biome biome, BlockPos pos, int seaLevel) {
-		return biome.getPrecipitationAt(coolerPosition(pos, seaLevel), seaLevel);
+		return Versioned.precipitationAt(biome, coolerPosition(pos, seaLevel), seaLevel);
 	}
 
 	/** True where extra height cooling (and only that) turns vanilla rain into snow. */
 	public static boolean extraCoolingMakesSnow(Biome biome, BlockPos pos, int seaLevel) {
 		BlockPos adjusted = coolerPosition(pos, seaLevel);
-		return adjusted != pos && biome.hasPrecipitation() && biome.warmEnoughToRain(pos, seaLevel) && biome.coldEnoughToSnow(adjusted, seaLevel);
+		return adjusted != pos && biome.hasPrecipitation() && Versioned.warmEnoughToRain(biome, pos, seaLevel) && Versioned.coldEnoughToSnow(biome, adjusted, seaLevel);
 	}
 
 	/** A snow layer could form on this spot (the placement half of vanilla's Biome.shouldSnow). */
 	public static boolean canPlaceSnow(LevelReader level, BlockPos pos) {
-		if (pos.getY() < level.getMinY() || pos.getY() > level.getMaxY() || level.getBrightness(LightLayer.BLOCK, pos) >= 10) {
+		if (pos.getY() < Versioned.minY(level) || pos.getY() > Versioned.maxY(level) || level.getBrightness(LightLayer.BLOCK, pos) >= 10) {
 			return false;
 		}
 		BlockState state = level.getBlockState(pos);
@@ -106,7 +108,7 @@ public final class RegionalWeather {
 		}
 		double precipitation = weather.precipitationAt(pos.getX() + 0.5, pos.getZ() + 0.5);
 		double span = Math.max(0.01, config.thresholds.heavyRain - config.thresholds.drizzle);
-		double chance = Math.clamp((precipitation - config.thresholds.drizzle) / span, 0.25, 1.0);
+		double chance = Mth.clamp((precipitation - config.thresholds.drizzle) / span, 0.25, 1.0);
 		return random.nextDouble() < chance;
 	}
 }

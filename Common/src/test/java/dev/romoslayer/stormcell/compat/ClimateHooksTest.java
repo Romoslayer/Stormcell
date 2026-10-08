@@ -6,11 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.romoslayer.seasonfall.api.SeasonfallApi;
 import dev.romoslayer.stormcell.Stormcell;
 import dev.romoslayer.stormcell.api.ClimateModifiers;
-import dev.romoslayer.stormcell.api.StormcellApi;
 import dev.romoslayer.stormcell.platform.Platform;
 import java.nio.file.Path;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.Biome;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,8 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class ClimateHooksTest {
-	private static final Identifier SEASONFALL_PROVIDER = Identifier.fromNamespaceAndPath("seasonfall", "climate");
-	private static final Identifier OTHER_PROVIDER = Identifier.fromNamespaceAndPath("othermod", "climate");
+	private static final String SEASONFALL_PROVIDER = "seasonfall:climate";
+	private static final String OTHER_PROVIDER = "othermod:climate";
 	private static final Holder<Biome> BIOME = Holder.direct(null);
 
 	@TempDir
@@ -46,8 +44,8 @@ class ClimateHooksTest {
 
 	@AfterEach
 	void tearDown() {
-		StormcellApi.unregisterClimateProvider(SEASONFALL_PROVIDER);
-		StormcellApi.unregisterClimateProvider(OTHER_PROVIDER);
+		ClimateProviderRegistry.unregister(SEASONFALL_PROVIDER);
+		ClimateProviderRegistry.unregister(OTHER_PROVIDER);
 		SeasonfallBridge.reset();
 	}
 
@@ -71,7 +69,7 @@ class ClimateHooksTest {
 
 	@Test
 	void aRegisteredSeasonfallProviderReplacesTheBridge() {
-		StormcellApi.registerClimateProvider(SEASONFALL_PROVIDER, (level, pos, biome) -> new ClimateModifiers(0.1F, 1.0F, 1.0F, 1.0F));
+		ClimateProviderRegistry.register(SEASONFALL_PROVIDER, (level, pos, biome) -> new ClimateModifiers(0.1F, 1.0F, 1.0F, 1.0F));
 		ClimateModifiers modifiers = ClimateHooks.modifiers(null, null, BIOME);
 		assertEquals(0.1F, modifiers.temperatureOffset(), 1.0E-6F, "applied once, not twice");
 		assertEquals(0, SeasonfallApi.calls);
@@ -79,7 +77,7 @@ class ClimateHooksTest {
 
 	@Test
 	void hugeCombinedValuesAreClamped() {
-		StormcellApi.registerClimateProvider(OTHER_PROVIDER, (level, pos, biome) -> new ClimateModifiers(1.0E30F, 3.0E38F, Float.MAX_VALUE, Float.NaN));
+		ClimateProviderRegistry.register(OTHER_PROVIDER, (level, pos, biome) -> new ClimateModifiers(1.0E30F, 3.0E38F, Float.MAX_VALUE, Float.NaN));
 		SeasonfallApi.answer = new dev.romoslayer.seasonfall.api.ClimateModifiers(1.0E30F, 3.0E38F, Float.MAX_VALUE, 2.0F);
 		ClimateModifiers modifiers = ClimateHooks.modifiers(null, null, BIOME);
 		assertTrue(Float.isFinite(modifiers.temperatureOffset()) && Math.abs(modifiers.temperatureOffset()) <= 5.0F);

@@ -6,7 +6,6 @@ import dev.romoslayer.stormcell.config.StormcellConfig;
 import dev.romoslayer.stormcell.platform.Platform;
 import dev.romoslayer.stormcell.sim.WeatherManager;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,10 +26,6 @@ public final class Stormcell {
 	private static @Nullable WeatherManager manager;
 
 	private Stormcell() {
-	}
-
-	public static Identifier id(String path) {
-		return Identifier.fromNamespaceAndPath(MOD_ID, path);
 	}
 
 	public static void init(Platform loaderPlatform) {

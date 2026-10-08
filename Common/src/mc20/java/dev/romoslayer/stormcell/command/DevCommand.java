@@ -3,6 +3,8 @@ package dev.romoslayer.stormcell.command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import dev.romoslayer.stormcell.mc.Versioned;
+import dev.romoslayer.stormcell.mixin.MobAccessor;
 import dev.romoslayer.stormcell.world.RegionalWeather;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -19,9 +21,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.animal.bee.Bee;
-import net.minecraft.world.entity.animal.fox.Fox;
-import net.minecraft.world.entity.animal.panda.Panda;
+import net.minecraft.world.entity.animal.Bee;
+import net.minecraft.world.entity.animal.Fox;
+import net.minecraft.world.entity.animal.Panda;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -73,7 +75,7 @@ final class DevCommand {
 	private static String describe(Entity entity) {
 		BlockPos pos = entity.blockPosition();
 		StringBuilder line = new StringBuilder(String.format(Locale.ROOT, "%s at %d %d %d: rain here %s, thunder here %s",
-				entity.getType().builtInRegistryHolder().key().identifier().getPath(), pos.getX(), pos.getY(), pos.getZ(),
+				Versioned.entityTypePath(entity.getType()), pos.getX(), pos.getY(), pos.getZ(),
 				RegionalWeather.mobRainCheck(entity.level(), pos, entity.level().isRaining()),
 				RegionalWeather.mobThunderCheck(entity.level(), pos, entity.level().isThundering())));
 		if (entity instanceof Panda panda) {
@@ -86,7 +88,7 @@ final class DevCommand {
 			line.append("; hive ").append(bee.hasHive() ? bee.getHivePos().toShortString() : "none");
 		}
 		if (entity instanceof Mob mob) {
-			line.append("; goals [").append(mob.getGoalSelector().getAvailableGoals().stream().filter(goal -> goal.isRunning())
+			line.append("; goals [").append(((MobAccessor) mob).stormcell$goalSelector().getAvailableGoals().stream().filter(goal -> goal.isRunning())
 					.map(goal -> goal.getGoal().getClass().getSimpleName()).sorted().collect(Collectors.joining(", "))).append(']');
 		}
 		return line.toString();

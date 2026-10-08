@@ -1,6 +1,6 @@
 # Stormcell
 
-Regional, moving weather for Minecraft servers (Fabric, NeoForge and Forge, Minecraft 26.2 and 26.3).
+Regional, moving weather for Minecraft servers (Fabric, NeoForge and Forge; Minecraft 1.20.1, 1.21.1, 26.2 and 26.3).
 
 Vanilla weather is one switch for the whole world: everyone gets rain at the same moment. Stormcell replaces that with
 storm systems that form, drift with the wind, build up, peak and fade away. It can pour on one player while another,
@@ -46,9 +46,9 @@ weather.
 - **The world reacts locally.** Mobs get wet, fires go out, farmland gets watered, cauldrons fill, snow piles up,
   lightning strikes, bees head home, foxes and pandas react to thunder, monsters spawn in storm gloom and beds work
   under a thunderstorm, all based on the weather where they are.
-- **Vanilla rules still apply.** With the `advance_weather` game rule off, or the game frozen with `/tick freeze`,
-  the weather holds still. Sleeping through the night ends the storms over the sleepers (vanilla ends its world-wide
-  rain); weather elsewhere carries on.
+- **Vanilla rules still apply.** With the `advance_weather` game rule off (`doWeatherCycle` before 26.x), or the
+  game frozen with `/tick freeze` (not in 1.20.1, which has no `/tick`), the weather holds still. Sleeping through the
+  night ends the storms over the sleepers (vanilla ends its world-wide rain); weather elsewhere carries on.
 - **/weather still works.** `clear` removes every storm and keeps new ones away for the duration (10 minutes if none
   is given). `rain` and `thunder` start a storm over whoever ran the command, which stays there at full strength for
   the duration (vanilla's usual length if none is given), then drifts off and fades.
@@ -132,8 +132,10 @@ On the server:
 ./gradlew build
 ```
 
-Builds for 26.3; add `-Pmc=26.2` for 26.2. Jars land in `Fabric/build/libs`, `NeoForge/build/libs` and `Forge/build/libs`. The build runs
-the unit tests (`Common/src/test`). Two longer runs are separate:
+Builds for 26.3; add `-Pmc=26.2`, `-Pmc=1.21.1` or `-Pmc=1.20.1` for the others. Jars land in
+`<Loader>/build/<generation>/libs` (`mc26`, `mc21` or `mc20`, e.g. `Fabric/build/mc26/libs`). Code shared by every
+version is in `src/main`; what differs between Minecraft generations is in `src/mc26`, `src/mc21` and `src/mc20`. The
+build runs the unit tests (`Common/src/test`). Two longer runs are separate:
 
 ```bash
 ./gradlew :Common:calibrate

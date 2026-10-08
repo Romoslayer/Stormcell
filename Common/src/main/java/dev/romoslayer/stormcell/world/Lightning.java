@@ -1,20 +1,15 @@
 package dev.romoslayer.stormcell.world;
 
 import dev.romoslayer.stormcell.config.StormcellConfig;
+import dev.romoslayer.stormcell.mc.Versioned;
 import dev.romoslayer.stormcell.mixin.ServerLevelInvoker;
 import dev.romoslayer.stormcell.sim.LevelWeather;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.LightningBolt;
-import net.minecraft.world.entity.animal.equine.SkeletonHorse;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.gamerules.GameRules;
-import net.minecraft.world.phys.Vec3;
 
 /**
  * Lightning under thunderstorms only. Replaces vanilla's per-chunk thunder tick: the same lightning rods, the same
@@ -42,7 +37,7 @@ public final class Lightning {
 		if (storm < threshold) {
 			return;
 		}
-		double strength = threshold >= 1.0 ? 1.0 : Math.clamp((storm - threshold) / (1.0 - threshold), 0.0, 1.0);
+		double strength = threshold >= 1.0 ? 1.0 : Mth.clamp((storm - threshold) / (1.0 - threshold), 0.0, 1.0);
 		double rate = config.lightningRateAtMinimum + (config.lightningRateAtMaximum - config.lightningRateAtMinimum) * strength;
 		if (level.getRandom().nextDouble() >= VANILLA_CHANCE * rate * config.lightningFrequencyMultiplier) {
 			return;
@@ -59,24 +54,13 @@ public final class Lightning {
 		}
 		DifficultyInstance difficulty = level.getCurrentDifficultyAt(pos);
 		boolean isTrap = config.skeletonTraps && !dry
-				&& level.getGameRules().get(GameRules.SPAWN_MOBS)
+				&& Versioned.spawnsMobs(level)
 				&& level.getRandom().nextDouble() < difficulty.getEffectiveDifficulty() * 0.01
-				&& !level.getBlockState(pos.below()).is(BlockTags.LIGHTNING_RODS);
+				&& !Versioned.isLightningRod(level.getBlockState(pos.below()));
 		if (isTrap) {
-			SkeletonHorse horse = EntityTypes.SKELETON_HORSE.create(level, EntitySpawnReason.EVENT);
-			if (horse != null) {
-				horse.setTrap(true);
-				horse.setAge(0);
-				horse.setPos(pos.getX(), pos.getY(), pos.getZ());
-				level.addFreshEntity(horse);
-			}
+			Versioned.spawnSkeletonTrap(level, pos);
 		}
-		LightningBolt bolt = EntityTypes.LIGHTNING_BOLT.create(level, EntitySpawnReason.EVENT);
-		if (bolt != null) {
-			bolt.snapTo(Vec3.atBottomCenterOf(pos));
-			// Dry lightning only flashes and thunders unless fires are allowed (they would burn savannas down)
-			bolt.setVisualOnly(isTrap || dry && !StormcellConfig.get().dryWeather.dryLightningStartsFires);
-			level.addFreshEntity(bolt);
-		}
+		// Dry lightning only flashes and thunders unless fires are allowed (they would burn savannas down)
+		Versioned.strikeLightning(level, pos, isTrap || dry && !StormcellConfig.get().dryWeather.dryLightningStartsFires);
 	}
 }

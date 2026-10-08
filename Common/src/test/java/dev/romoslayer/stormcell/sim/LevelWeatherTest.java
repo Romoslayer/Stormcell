@@ -215,7 +215,7 @@ class LevelWeatherTest {
 		weather.spawnStorm(StormSystem.Kind.SHOWER, 5000, 0, 0.6, 100000, LevelWeather.Overflow.REJECT);
 		assertEquals(1, weather.clearStormsOver(List.of(new WeatherEnvironment.Observer(10, 10))));
 		assertEquals(1, weather.storms().size());
-		assertEquals(5000.0, weather.storms().getFirst().x, 1.0);
+		assertEquals(5000.0, weather.storms().get(0).x, 1.0);
 		assertTrue(weather.precipitationAt(10, 10) < 0.01F, "the sleeper's sky clears at once");
 	}
 
@@ -248,8 +248,8 @@ class LevelWeatherTest {
 
 		LevelWeather restored = new LevelWeather(environment, state, 7L);
 		assertEquals(1, restored.storms().size());
-		StormSystem before = weather.storms().getFirst();
-		StormSystem after = restored.storms().getFirst();
+		StormSystem before = weather.storms().get(0);
+		StormSystem after = restored.storms().get(0);
 		assertEquals(before.x, after.x, 1.0E-9);
 		assertEquals(before.intensity, after.intensity, 1.0E-9);
 		assertEquals(before.anchored, after.anchored);

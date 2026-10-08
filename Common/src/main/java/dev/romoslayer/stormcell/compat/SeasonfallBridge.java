@@ -53,11 +53,11 @@ public final class SeasonfallBridge {
 
 	/** Whether Seasonfall is installed and its API was found. */
 	public static boolean isAvailable() {
-		return resolve() && !StormcellApi.hasClimateProviderFrom(MOD_ID);
+		return resolve() && !ClimateProviderRegistry.hasProviderFrom(MOD_ID);
 	}
 
 	static ClimateModifiers modifiers(ServerLevel level, Holder<Biome> biome) {
-		if (!resolve() || StormcellApi.hasClimateProviderFrom(MOD_ID)) {
+		if (!resolve() || ClimateProviderRegistry.hasProviderFrom(MOD_ID)) {
 			return ClimateModifiers.NONE;
 		}
 		try {

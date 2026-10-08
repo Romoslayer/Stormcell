@@ -1,46 +1,121 @@
 plugins {
     id 'multiloader-loader'
-    id 'net.minecraftforge.gradle'
 }
 
-// "26.2-65.1.3" -> "65": the Forge major version, which mods.toml's ranges use
+// Forge needs two build plugins. ForgeGradle 7 builds 26.x and 1.21.x (1.21.x being obfuscated, it is told to use the
+// official names); it cannot build 1.20.x, and ForgeGradle 6, which can, does not run on Gradle 9, so 1.20.x uses
+// ModDevGradle's "legacyforge" plugin. A plugins block cannot branch, so the plugin is applied here.
+if (generation == 'mc20') {
+    apply plugin: 'net.neoforged.moddev.legacyforge'
+} else {
+    apply plugin: 'net.minecraftforge.gradle'
+    if (generation == 'mc21') {
+        apply plugin: 'net.minecraftforge.jarjar'
+    }
+}
+
+// "26.2-65.1.3" -> "65", "1.21.1-52.1.16" -> "52": the Forge major version, which mods.toml's ranges use
 def forgeMajor = forge_version.tokenize('-')[1].tokenize('.')[0]
 // The shared mixins only: the bed checks are Forge events here (see StormcellForge), so stormcell.bed.mixins.json is left out
 def mixinConfigs = "${mod_id}.mixins.json"
+def refmap = "${mod_id}.refmap.json"
 
-minecraft {
-    runs {
-        configureEach {
-            // Dev runs load classes from folders, so Mixin cannot read the jar manifest
-            mixinConfigs.tokenize(',').each { args '--mixin.config', it }
+if (generation == 'mc20') {
+    legacyForge {
+        enable {
+            forgeVersion = forge_version
         }
-        register('client') {
-            workingDir = layout.projectDirectory.dir('runs/client')
+        runs {
+            client {
+                client()
+                gameDirectory = file('runs/client')
+            }
+            server {
+                server()
+                gameDirectory = file('runs/server')
+                programArgument '--nogui'
+            }
         }
-        register('server') {
-            workingDir = layout.projectDirectory.dir('runs/server')
-            args '--nogui'
+        mods {
+            "${mod_id}" {
+                sourceSet sourceSets.main
+            }
+        }
+    }
+
+    // Forge 1.20.x runs on SRG names, so the mixins need a refmap
+    mixin {
+        add sourceSets.main, refmap
+        config mixinConfigs
+    }
+
+    dependencies {
+        annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+        // Forge 1.20.x does not ship MixinExtras, so the jar carries it
+        compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${mixinextras_version}"))
+        implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextras_version}"))
+    }
+} else {
+    minecraft {
+        if (generation != 'mc26') {
+            mappings channel: 'official', version: mc_version
+        }
+        runs {
+            configureEach {
+                // Dev runs load classes from folders, so Mixin cannot read the jar manifest
+                mixinConfigs.tokenize(',').each { args '--mixin.config', it }
+            }
+            register('client') {
+                workingDir = layout.projectDirectory.dir('runs/client')
+            }
+            register('server') {
+                workingDir = layout.projectDirectory.dir('runs/server')
+                args '--nogui'
+            }
+        }
+    }
+
+    repositories {
+        minecraft.mavenizer(it)
+        maven fg.forgeMaven
+        maven fg.minecraftLibsMaven
+    }
+
+    if (generation == 'mc21') {
+        // The published jar is the one with MixinExtras inside; the plain jar becomes "-slim"
+        jarJar.register {
+            archiveClassifier = null
+        }
+        jar {
+            archiveClassifier = 'slim'
+        }
+    }
+
+    dependencies {
+        implementation minecraft.dependency("net.minecraftforge:forge:${forge_version}")
+        if (generation == 'mc21') {
+            // Forge 1.21.x does not ship MixinExtras (26.x does), so the jar carries it; dev runs need it on the classpath
+            compileOnly "io.github.llamalad7:mixinextras-common:${mixinextras_version}"
+            jarJar "io.github.llamalad7:mixinextras-forge:${mixinextras_version}"
+            runtimeOnly "io.github.llamalad7:mixinextras-forge:${mixinextras_version}"
         }
     }
 }
 
-repositories {
-    minecraft.mavenizer(it)
-    maven fg.forgeMaven
-    maven fg.minecraftLibsMaven
-}
-
-dependencies {
-    implementation minecraft.dependency("net.minecraftforge:forge:${forge_version}")
-}
-
 processResources {
     def mcParts = mc_version.tokenize('.')
-    def forgeProps = [forge_major: forgeMajor, forge_mc_range: "[${mc_version},${mcParts[0]}.${(mcParts[1] as int) + 1})"]
+    def nextMinecraft = (mcParts.take(mcParts.size() - 1) + [(mcParts.last() as int) + 1]).join('.')
+    def forgeProps = [forge_major: forgeMajor, forge_mc_range: "[${mc_version},${nextMinecraft})"]
     inputs.properties(forgeProps)
     filesMatching('META-INF/mods.toml') {
         expand(forgeProps + [version: project.version.toString(), mod_id: mod_id, mod_name: mod_name, mod_author: mod_author,
                              mod_description: mod_description, license: license])
+    }
+    if (generation == 'mc20') {
+        // Point the mixin config at the refmap the annotation processor writes
+        filesMatching(mixinConfigs) {
+            filter { it.replace('"package":', "\"refmap\": \"${refmap}\",\n\t\"package\":") }
+        }
     }
 }
 

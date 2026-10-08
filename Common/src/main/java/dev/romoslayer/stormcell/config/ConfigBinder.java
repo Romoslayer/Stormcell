@@ -203,7 +203,7 @@ public final class ConfigBinder {
 				try {
 					Object entry = valueType.getDeclaredConstructor().newInstance();
 					readTable(tables, tablePath, entry, problems, visited);
-					entries.put(tablePath.getLast(), entry);
+					entries.put(tablePath.get(tablePath.size() - 1), entry);
 				} catch (ReflectiveOperationException e) {
 					throw new IllegalStateException("Config class " + valueType + " needs a public no-argument constructor", e);
 				}

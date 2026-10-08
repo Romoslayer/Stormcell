@@ -11,6 +11,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import dev.romoslayer.stormcell.Stormcell;
 import dev.romoslayer.stormcell.api.LocalWeather;
 import dev.romoslayer.stormcell.config.StormcellConfig;
+import dev.romoslayer.stormcell.mc.Versioned;
 import dev.romoslayer.stormcell.sim.LevelWeather;
 import dev.romoslayer.stormcell.sim.StormSystem;
 import dev.romoslayer.stormcell.sim.WeatherManager;
@@ -48,7 +49,7 @@ public final class StormcellCommand {
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 		LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal(Stormcell.MOD_ID)
-				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+				.requires(Versioned.operators())
 				.then(Commands.literal("info").executes(StormcellCommand::info))
 				.then(Commands.literal("spawn")
 						.then(Commands.argument("kind", StringArgumentType.word())
@@ -87,7 +88,7 @@ public final class StormcellCommand {
 		int z = (int) Math.floor(pos.z);
 		LocalWeather local = weather.localWeather(pos.x, pos.z);
 		StormcellConfig config = StormcellConfig.get();
-		source.sendSuccess(() -> Component.literal("Stormcell weather at " + x + ", " + z + " in " + level.dimension().identifier())
+		source.sendSuccess(() -> Component.literal("Stormcell weather at " + x + ", " + z + " in " + Versioned.id(level.dimension()))
 				.withStyle(ChatFormatting.AQUA), false);
 		source.sendSuccess(() -> Component.literal(condition(config, local.precipitationIntensity(), local.stormIntensity(), local.dustIntensity()))
 				.withStyle(ChatFormatting.WHITE)
@@ -150,13 +151,13 @@ public final class StormcellCommand {
 		long ago = Math.max(0L, System.currentTimeMillis() - view.lastChangeMillis());
 		source.sendSuccess(() -> Component.literal(String.format(Locale.ROOT,
 				"%s's client: rain %.3f, thunder %.3f (drawn %.3f) in %s; %d weather packets, last %s %.1f s ago", name, view.rain(), view.thunder(),
-				view.shownThunder(), view.dimension() == null ? "?" : view.dimension().identifier(), view.packets(), view.lastEvent(), ago / 1000.0)), false);
+				view.shownThunder(), view.dimension() == null ? "?" : Versioned.id(view.dimension()), view.packets(), view.lastEvent(), ago / 1000.0)), false);
 		LevelWeather weather = RegionalWeather.weather(player.level());
 		if (weather != null) {
 			StormcellConfig config = StormcellConfig.get();
 			float precipitation = weather.precipitationAt(player.getX(), player.getZ());
 			float storm = weather.stormAt(player.getX(), player.getZ());
-			PlayerWeatherSync.Targets targets = PlayerWeatherSync.targets(config, weather, player.level(), player.getX(), player.getY(), player.getZ());
+			PlayerWeatherSync.Targets targets = PlayerWeatherSync.targets(config, weather, Versioned.level(player), player.getX(), player.getY(), player.getZ());
 			source.sendSuccess(() -> Component.literal(String.format(Locale.ROOT,
 					"Simulated at %d, %d: %s (storm %.3f, precipitation %.3f, dust %.3f); target rain %.3f, thunder %.3f", player.getBlockX(),
 					player.getBlockZ(), condition(config, precipitation, storm, targets.dust()), storm, precipitation, targets.dust(), targets.rain(), targets.thunder()))

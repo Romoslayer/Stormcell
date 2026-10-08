@@ -2,6 +2,7 @@ package dev.romoslayer.stormcell.sync;
 
 import dev.romoslayer.stormcell.Stormcell;
 import dev.romoslayer.stormcell.config.StormcellConfig;
+import dev.romoslayer.stormcell.mc.Versioned;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -15,8 +16,7 @@ import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
@@ -100,10 +100,10 @@ public final class ClientWeatherView {
 		/** Applies one game event packet exactly as the vanilla client does. Returns false if it is not about weather. */
 		synchronized boolean apply(ClientboundGameEventPacket.Type event, float value) {
 			if (event == ClientboundGameEventPacket.RAIN_LEVEL_CHANGE) {
-				this.rain = Math.clamp(value, 0.0F, 1.0F);
+				this.rain = Mth.clamp(value, 0.0F, 1.0F);
 				this.changed("RAIN_LEVEL_CHANGE");
 			} else if (event == ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE) {
-				this.thunder = Math.clamp(value, 0.0F, 1.0F);
+				this.thunder = Mth.clamp(value, 0.0F, 1.0F);
 				this.changed("THUNDER_LEVEL_CHANGE");
 			} else if (event == ClientboundGameEventPacket.START_RAINING) {
 				this.rain = 0.0F;
@@ -125,7 +125,7 @@ public final class ClientWeatherView {
 
 		synchronized String describe() {
 			return String.format(Locale.ROOT, "rain %.3f, thunder %.3f (drawn %.3f) in %s", this.rain, this.thunder, this.shownThunder(),
-					this.dimension == null ? "?" : this.dimension.identifier());
+					this.dimension == null ? "?" : Versioned.id(this.dimension));
 		}
 	}
 
@@ -138,18 +138,17 @@ public final class ClientWeatherView {
 			}
 		} else if (packet instanceof ClientboundLoginPacket login) {
 			View view = view(player);
-			view.newWorld(login.commonPlayerSpawnInfo().dimension(), "join");
+			view.newWorld(Versioned.dimension(login), "join");
 			log(player, view, "join (new client world)");
 		} else if (packet instanceof ClientboundRespawnPacket respawn) {
 			View view = view(player);
-			ResourceKey<Level> dimension = respawn.commonPlayerSpawnInfo().dimension();
+			ResourceKey<Level> dimension = Versioned.dimension(respawn);
 			// The client only starts a new world (and loses its weather) when the dimension changes
 			if (dimension != view.dimension) {
 				view.newWorld(dimension, "dimension change");
 				log(player, view, "dimension change (new client world)");
 			}
-		} else if (packet instanceof ClientboundStopSoundPacket stop && stop.getSource() == SoundSource.WEATHER
-				&& SoundEvents.ELYTRA_FLYING.location().equals(stop.getName())) {
+		} else if (packet instanceof ClientboundStopSoundPacket stop && Versioned.isDustWindStop(stop)) {
 			// Only DustWind stops this sound in the weather category
 			View view = view(player);
 			synchronized (view) {

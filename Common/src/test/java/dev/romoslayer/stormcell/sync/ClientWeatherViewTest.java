@@ -4,17 +4,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.romoslayer.stormcell.mc.Versioned;
+import net.minecraft.SharedConstants;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.Test;
 
 class ClientWeatherViewTest {
-	// Built directly: Level.OVERWORLD would initialise the game registries, which tests do not have
-	private static final ResourceKey<Level> OVERWORLD = ResourceKey.create(Registries.DIMENSION, Identifier.withDefaultNamespace("overworld"));
-	private static final ResourceKey<Level> NETHER = ResourceKey.create(Registries.DIMENSION, Identifier.withDefaultNamespace("the_nether"));
+	static {
+		// Dimension keys need the built-in registries before 26.x
+		SharedConstants.tryDetectVersion();
+		Bootstrap.bootStrap();
+	}
+
+	private static final ResourceKey<Level> OVERWORLD = Versioned.dimension("minecraft:overworld");
+	private static final ResourceKey<Level> NETHER = Versioned.dimension("minecraft:the_nether");
 
 	@Test
 	void appliesWeatherPacketsLikeTheVanillaClient() {

@@ -3,6 +3,7 @@ package dev.romoslayer.stormcell.sim;
 import dev.romoslayer.stormcell.api.ClimateModifiers;
 import dev.romoslayer.stormcell.climate.BiomeClimate;
 import dev.romoslayer.stormcell.compat.ClimateHooks;
+import dev.romoslayer.stormcell.mc.Versioned;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -21,7 +22,7 @@ public final class LevelEnvironment implements WeatherEnvironment {
 		this.level = level;
 		this.serverThread = level.getServer().getRunningThread();
 		// High above the terrain the biome source always answers with the surface biome, never a cave biome
-		this.sampleQuartY = QuartPos.fromBlock(Math.min(level.getMaxY() - 1, level.getSeaLevel() + 160));
+		this.sampleQuartY = QuartPos.fromBlock(Math.min(Versioned.maxY(level) - 1, level.getSeaLevel() + 160));
 	}
 
 	public ServerLevel level() {
@@ -35,7 +36,7 @@ public final class LevelEnvironment implements WeatherEnvironment {
 
 	@Override
 	public String dimensionId() {
-		return this.level.dimension().identifier().toString();
+		return Versioned.id(this.level.dimension());
 	}
 
 	@Override
@@ -78,7 +79,7 @@ public final class LevelEnvironment implements WeatherEnvironment {
 
 	@Override
 	public long dayTime() {
-		return this.level.getOverworldClockTime();
+		return Versioned.dayTime(this.level);
 	}
 
 	@Override

@@ -1,21 +1,18 @@
 package dev.romoslayer.stormcell.climate;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
 import dev.romoslayer.stormcell.Stormcell;
 import dev.romoslayer.stormcell.config.StormcellConfig;
+import dev.romoslayer.stormcell.mc.Versioned;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.biome.Biome;
 
 /**
@@ -90,7 +87,7 @@ public record BiomeClimate(Holder<Biome> holder, float baseTemperature, float hu
 			offset = (float) override.temperatureOffset;
 		}
 		boolean dusty = matchesAny(holder, config.dryWeather.dustStormBiomes);
-		return new BiomeClimate(holder, normal[0] + offset, Math.clamp(humidity, 0.0F, 1.0F), biome.hasPrecipitation(), water, rain, storm, dusty);
+		return new BiomeClimate(holder, normal[0] + offset, Mth.clamp(humidity, 0.0F, 1.0F), biome.hasPrecipitation(), water, rain, storm, dusty);
 	}
 
 	/** Whether a biome matches any of a list of biome ids and #tags. */
@@ -98,11 +95,11 @@ public record BiomeClimate(Holder<Biome> holder, float baseTemperature, float hu
 		Optional<ResourceKey<Biome>> key = holder.unwrapKey();
 		for (String entry : entries) {
 			if (entry.startsWith("#")) {
-				Identifier tag = Identifier.tryParse(entry.substring(1));
-				if (tag != null && holder.is(TagKey.create(Registries.BIOME, tag))) {
+				TagKey<Biome> tag = Versioned.biomeTag(entry.substring(1));
+				if (tag != null && holder.is(tag)) {
 					return true;
 				}
-			} else if (key.isPresent() && key.get().identifier().toString().equals(entry)) {
+			} else if (key.isPresent() && Versioned.id(key.get()).equals(entry)) {
 				return true;
 			}
 		}
@@ -112,15 +109,15 @@ public record BiomeClimate(Holder<Biome> holder, float baseTemperature, float hu
 	private static StormcellConfig.BiomeOverride findOverride(Holder<Biome> holder, StormcellConfig config) {
 		Optional<ResourceKey<Biome>> key = holder.unwrapKey();
 		if (key.isPresent()) {
-			StormcellConfig.BiomeOverride exact = config.biomeOverrides.get(key.get().identifier().toString());
+			StormcellConfig.BiomeOverride exact = config.biomeOverrides.get(Versioned.id(key.get()));
 			if (exact != null) {
 				return exact;
 			}
 		}
 		for (Map.Entry<String, StormcellConfig.BiomeOverride> entry : config.biomeOverrides.entrySet()) {
 			if (entry.getKey().startsWith("#")) {
-				Identifier tag = Identifier.tryParse(entry.getKey().substring(1));
-				if (tag != null && holder.is(TagKey.create(Registries.BIOME, tag))) {
+				TagKey<Biome> tag = Versioned.biomeTag(entry.getKey().substring(1));
+				if (tag != null && holder.is(tag)) {
 					return entry.getValue();
 				}
 			}
@@ -141,8 +138,7 @@ public record BiomeClimate(Holder<Biome> holder, float baseTemperature, float hu
 		float temperature = biome.getBaseTemperature();
 		float downfall = estimateDownfall(biome);
 		try {
-			RegistryOps<JsonElement> ops = registries.createSerializationContext(JsonOps.INSTANCE);
-			JsonObject object = Biome.NETWORK_CODEC.encodeStart(ops, biome).getOrThrow().getAsJsonObject();
+			JsonObject object = Versioned.encodeForNetwork(biome, registries);
 			if (object.has("temperature")) {
 				temperature = object.get("temperature").getAsFloat();
 			}

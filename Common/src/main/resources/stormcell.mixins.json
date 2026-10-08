@@ -11,6 +11,7 @@
 		"FoxMixin",
 		"FoxSeekShelterGoalMixin",
 		"LevelMixin",
+		"MobAccessor",
 		"MonsterMixin",
 		"PandaMixin",
 		"PlayerListMixin",

@@ -193,7 +193,7 @@ public final class WeatherState {
 				continue;
 			}
 			// A timestamp in the future would stop the region from ever recovering; one before the start is harmless
-			long tick = Math.clamp(cell.tick(), 0L, this.simTicks);
+			long tick = Math.max(0L, Math.min(cell.tick(), this.simTicks));
 			goodCells.add(new DryCell(cell.x(), cell.z(), Math.min(cell.depletion(), 0.6F), tick));
 		}
 		if (badCells > 0) {

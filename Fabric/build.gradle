@@ -1,12 +1,35 @@
+// Two Minecraft generations need two different Looms, and they are not the same plugin: 26.x uses the modern
+// "net.fabricmc.fabric-loom" (Mojang names built in, nothing remapped), while the obfuscated 1.21.x and 1.20.x need the
+// older "fabric-loom", which remaps the jar and writes the mixin refmap. A plugins block cannot branch, so the Loom is
+// put on the classpath here and applied below.
+buildscript {
+    def modern = project.findProperty('generation') == 'mc26'
+    repositories {
+        maven { url = 'https://maven.fabricmc.net/' }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "net.fabricmc:fabric-loom:${modern ? project.loom_version : project.loom_version_legacy}"
+    }
+}
+
 plugins {
     id 'multiloader-loader'
-    id 'net.fabricmc.fabric-loom'
 }
+
+apply plugin: generation == 'mc26' ? 'net.fabricmc.fabric-loom' : 'fabric-loom'
 
 dependencies {
     minecraft "com.mojang:minecraft:${mc_version}"
-    implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
-    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    if (generation == 'mc26') {
+        implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+        implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    } else {
+        mappings loom.officialMojangMappings()
+        modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+        modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    }
 }
 
 loom {
@@ -26,4 +49,3 @@ loom {
         }
     }
 }
-

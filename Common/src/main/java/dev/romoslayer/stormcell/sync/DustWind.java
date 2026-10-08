@@ -1,12 +1,13 @@
 package dev.romoslayer.stormcell.sync;
 
 import dev.romoslayer.stormcell.config.StormcellConfig;
+import dev.romoslayer.stormcell.mc.Versioned;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
-import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 
 /**
@@ -43,7 +44,7 @@ final class DustWind {
 		if (gusts.blowing && tick < gusts.nextGustTick) {
 			return;
 		}
-		double strength = Math.clamp((dust - threshold) / Math.max(0.01, 1.0 - threshold), 0.0, 1.0);
+		double strength = Mth.clamp((dust - threshold) / Math.max(0.01, 1.0 - threshold), 0.0, 1.0);
 		RandomSource random = player.getRandom();
 		float volume = (float) (config.dustSoundVolume * (0.4 + 0.6 * strength));
 		float pitch = MIN_PITCH + random.nextFloat() * (MAX_PITCH - MIN_PITCH);
@@ -59,7 +60,7 @@ final class DustWind {
 		if (gusts.blowing) {
 			gusts.blowing = false;
 			// Only Stormcell plays this sound in the weather category (the game's own elytra sound is a player sound)
-			player.connection.send(new ClientboundStopSoundPacket(SoundEvents.ELYTRA_FLYING.location(), SoundSource.WEATHER));
+			player.connection.send(Versioned.stopDustWind());
 		}
 	}
 

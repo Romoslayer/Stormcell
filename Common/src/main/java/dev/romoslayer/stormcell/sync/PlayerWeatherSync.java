@@ -1,6 +1,7 @@
 package dev.romoslayer.stormcell.sync;
 
 import dev.romoslayer.stormcell.config.StormcellConfig;
+import dev.romoslayer.stormcell.mc.Versioned;
 import dev.romoslayer.stormcell.sim.LevelWeather;
 import dev.romoslayer.stormcell.world.RegionalWeather;
 import java.util.HashMap;
@@ -94,7 +95,7 @@ public final class PlayerWeatherSync {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			State state = this.states.computeIfAbsent(player.getUUID(), uuid -> new State());
 			boolean jumped = state.moveTo(player.getX(), player.getZ());
-			ServerLevel level = player.level();
+			ServerLevel level = Versioned.level(player);
 			LevelWeather weather = RegionalWeather.weather(level);
 			if (weather == null) {
 				if (state.managed) {
@@ -160,7 +161,7 @@ public final class PlayerWeatherSync {
 	}
 
 	private void updateTarget(ServerPlayer player, LevelWeather weather, State state) {
-		Targets targets = targets(StormcellConfig.get(), weather, player.level(), player.getX(), player.getY(), player.getZ());
+		Targets targets = targets(StormcellConfig.get(), weather, Versioned.level(player), player.getX(), player.getY(), player.getZ());
 		state.target(targets.rain(), targets.thunder());
 		state.dust = targets.dust();
 	}

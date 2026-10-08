@@ -4,6 +4,7 @@ import dev.romoslayer.stormcell.Stormcell;
 import dev.romoslayer.stormcell.climate.BiomeClimate;
 import dev.romoslayer.stormcell.compat.SeasonfallBridge;
 import dev.romoslayer.stormcell.config.StormcellConfig;
+import dev.romoslayer.stormcell.mc.Versioned;
 import dev.romoslayer.stormcell.persist.WeatherState;
 import dev.romoslayer.stormcell.sync.ClientWeatherView;
 import dev.romoslayer.stormcell.sync.PlayerWeatherSync;
@@ -16,13 +17,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelResource;
 import org.jspecify.annotations.Nullable;
 
@@ -65,9 +64,9 @@ public final class WeatherManager {
 	public void tick() {
 		SeasonfallBridge.tick();
 		// Like vanilla's weather cycle: paused while the game is frozen or advance_weather is off
-		boolean running = this.server.tickRateManager().runsNormally();
+		boolean running = Versioned.ticksNormally(this.server);
 		for (Managed managed : this.levels.values()) {
-			boolean advance = running && managed.level().getGameRules().get(GameRules.ADVANCE_WEATHER);
+			boolean advance = running && Versioned.advancesWeather(managed.level());
 			managed.weather().tick(advance);
 		}
 		this.sync.tick(this.server);
@@ -105,7 +104,7 @@ public final class WeatherManager {
 				// Vanilla's world-wide rain stops here; each player is shown their local weather instead
 				level.setRainLevel(0.0F);
 				level.setThunderLevel(0.0F);
-				Stormcell.LOGGER.info("Stormcell is running the weather in {}", key.identifier());
+				Stormcell.LOGGER.info("Stormcell is running the weather in {}", Versioned.id(key));
 			} else if (!wanted && current != null) {
 				WeatherState state = current.weather().snapshotState();
 				if (!state.save(this.file(key))) {
@@ -113,18 +112,18 @@ public final class WeatherManager {
 				}
 				((StormcellLevel) level).stormcell$setWeather(null);
 				this.levels.remove(key);
-				Stormcell.LOGGER.info("Stormcell handed the weather in {} back to vanilla", key.identifier());
+				Stormcell.LOGGER.info("Stormcell handed the weather in {} back to vanilla", Versioned.id(key));
 			}
 		}
 	}
 
 	private boolean shouldManage(ServerLevel level) {
 		StormcellConfig config = StormcellConfig.get();
-		String id = level.dimension().identifier().toString();
+		String id = Versioned.id(level.dimension());
 		if (!config.general.enabled || !config.general.dimensions.contains(id)) {
 			return false;
 		}
-		if (!level.canHaveWeather()) {
+		if (!Versioned.canHaveWeather(level)) {
 			if (this.warnedDimensions.add(id)) {
 				Stormcell.LOGGER.warn("{} is listed in general.dimensions but has no sky to show weather in; leaving it alone", id);
 			}
@@ -157,8 +156,8 @@ public final class WeatherManager {
 	}
 
 	private Path file(ResourceKey<Level> dimension) {
-		Identifier id = dimension.identifier();
-		return this.saveDirectory.resolve(id.getNamespace()).resolve(id.getPath() + ".json");
+		String[] id = Versioned.id(dimension).split(":", 2);
+		return this.saveDirectory.resolve(id[0]).resolve(id[1] + ".json");
 	}
 
 	public @Nullable LevelWeather weather(ResourceKey<Level> dimension) {
@@ -176,7 +175,7 @@ public final class WeatherManager {
 	 */
 	public void onNightSkipped(ServerLevel level) {
 		Managed managed = this.levels.get(level.dimension());
-		if (managed == null || !level.getGameRules().get(GameRules.ADVANCE_WEATHER)) {
+		if (managed == null || !Versioned.advancesWeather(level)) {
 			return;
 		}
 		List<WeatherEnvironment.Observer> sleepers = new ArrayList<>();
@@ -188,7 +187,7 @@ public final class WeatherManager {
 		if (!sleepers.isEmpty()) {
 			int removed = managed.weather().clearStormsOver(sleepers);
 			if (removed > 0) {
-				Stormcell.LOGGER.debug("Sleeping cleared {} storm(s) in {}", removed, level.dimension().identifier());
+				Stormcell.LOGGER.debug("Sleeping cleared {} storm(s) in {}", removed, Versioned.id(level.dimension()));
 			}
 		}
 	}

@@ -3,12 +3,12 @@ package dev.romoslayer.stormcell.compat;
 import dev.romoslayer.stormcell.Stormcell;
 import dev.romoslayer.stormcell.api.ClimateModifierProvider;
 import dev.romoslayer.stormcell.api.ClimateModifiers;
-import dev.romoslayer.stormcell.api.StormcellApi;
 import dev.romoslayer.stormcell.config.StormcellConfig;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.biome.Biome;
 
 /** Collects the climate modifiers from every registered provider and the built-in Seasonfall bridge. */
@@ -24,7 +24,7 @@ public final class ClimateHooks {
 			return ClimateModifiers.NONE;
 		}
 		ClimateModifiers result = ClimateModifiers.NONE;
-		List<ClimateModifierProvider> providers = StormcellApi.climateProviders();
+		List<ClimateModifierProvider> providers = ClimateProviderRegistry.providers();
 		for (ClimateModifierProvider provider : providers) {
 			try {
 				ClimateModifiers modifiers = provider.getModifiers(level, pos, biome);
@@ -48,7 +48,7 @@ public final class ClimateHooks {
 	/** Whether anything could change the climate at all, so the common case skips building positions. */
 	public static boolean anyActive() {
 		StormcellConfig.Seasons config = StormcellConfig.get().seasons;
-		return config.integrationEnabled && (!StormcellApi.climateProviders().isEmpty() || config.seasonfallBridge && SeasonfallBridge.isAvailable());
+		return config.integrationEnabled && (!ClimateProviderRegistry.providers().isEmpty() || config.seasonfallBridge && SeasonfallBridge.isAvailable());
 	}
 
 	/** Keeps combined modifiers within sane limits (offset within 5, multipliers within 0 to 20). */
@@ -56,9 +56,9 @@ public final class ClimateHooks {
 		if (modifiers == ClimateModifiers.NONE) {
 			return modifiers;
 		}
-		return new ClimateModifiers(Math.clamp(orIfNaN(modifiers.temperatureOffset(), 0.0F), -5.0F, 5.0F),
-				Math.clamp(orIfNaN(modifiers.humidityMultiplier(), 1.0F), 0.0F, 20.0F), Math.clamp(orIfNaN(modifiers.precipitationMultiplier(), 1.0F), 0.0F, 20.0F),
-				Math.clamp(orIfNaN(modifiers.stormProbabilityMultiplier(), 1.0F), 0.0F, 20.0F));
+		return new ClimateModifiers(Mth.clamp(orIfNaN(modifiers.temperatureOffset(), 0.0F), -5.0F, 5.0F),
+				Mth.clamp(orIfNaN(modifiers.humidityMultiplier(), 1.0F), 0.0F, 20.0F), Mth.clamp(orIfNaN(modifiers.precipitationMultiplier(), 1.0F), 0.0F, 20.0F),
+				Mth.clamp(orIfNaN(modifiers.stormProbabilityMultiplier(), 1.0F), 0.0F, 20.0F));
 	}
 
 	private static ClimateModifiers sanitize(ClimateModifiers modifiers) {

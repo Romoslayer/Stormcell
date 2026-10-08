@@ -1,11 +1,21 @@
 plugins {
     id 'multiloader-common'
-    id 'net.neoforged.moddev'
 }
 
-// Plain Minecraft (no loader) so nothing loader-specific can creep into the shared code
-neoForge {
-    neoFormVersion = neoform_version
+// Plain Minecraft (no loader) so nothing loader-specific can creep into the shared code: NeoForm for 26.x and 1.21.x,
+// MCP through ModDevGradle's legacy plugin for 1.20.x (NeoForm does not cover it)
+if (generation == 'mc20') {
+    apply plugin: 'net.neoforged.moddev.legacyforge'
+    legacyForge {
+        enable {
+            mcpVersion = mcp_version
+        }
+    }
+} else {
+    apply plugin: 'net.neoforged.moddev'
+    neoForge {
+        neoFormVersion = neoform_version
+    }
 }
 
 dependencies {
@@ -43,6 +53,13 @@ tasks.named('test', Test) {
 // ModDevGradle only puts Minecraft on the main classpath; the tests need it too
 sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
 sourceSets.test.runtimeClasspath += sourceSets.main.compileClasspath
+// Tests that bootstrap the game's registries also load its language file. 26.x keeps it in the game jar; for the older,
+// obfuscated versions it is in a separate resources jar.
+if (generation != 'mc26') {
+    dependencies {
+        testRuntimeOnly files(tasks.named('createMinecraftArtifacts').flatMap { it.resourcesArtifact })
+    }
+}
 
 // Long simulation runs (gradlew :Common:calibrate) and load benchmarks (gradlew :Common:benchmark), kept out of the
 // normal test run because they take a while and print tables rather than pass/fail on fine details

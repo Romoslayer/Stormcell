@@ -1,26 +1,103 @@
 plugins {
     id 'multiloader-loader'
-    id 'net.neoforged.moddev'
 }
 
-neoForge {
-    version = neoforge_version
+// NeoForge for Minecraft 1.20.1 (47.1) is a fork of Forge 47: same packages, same mods.toml, and it reports itself as
+// "forge". So that version builds with ModDevGradle's "legacyforge" plugin from the Forge module's 1.20.x sources, and
+// the NeoForge-API entry point and neoforge.mods.toml in src/main are left out. A plugins block cannot branch, so the
+// plugin is applied here.
+if (generation == 'mc20') {
+    apply plugin: 'net.neoforged.moddev.legacyforge'
+} else {
+    apply plugin: 'net.neoforged.moddev'
+}
 
-    runs {
-        client {
-            client()
-            gameDirectory = file('runs/client')
+if (generation == 'mc20') {
+    def forgeModule = rootProject.file('Forge/src')
+    sourceSets.main.java.srcDirs = [new File(forgeModule, 'mc20/java')]
+    sourceSets.main.resources.srcDirs = [new File(forgeModule, 'main/resources')]
+
+    // The shared mixins only: the bed checks are Forge events here (see StormcellForge)
+    def mixinConfigs = "${mod_id}.mixins.json"
+    def refmap = "${mod_id}.refmap.json"
+
+    legacyForge {
+        enable {
+            neoForgeVersion = neoforge_version
         }
-        server {
-            server()
-            gameDirectory = file('runs/server')
-            programArgument '--nogui'
+        runs {
+            client {
+                client()
+                gameDirectory = file('runs/client')
+            }
+            server {
+                server()
+                gameDirectory = file('runs/server')
+                programArgument '--nogui'
+            }
+        }
+        mods {
+            "${mod_id}" {
+                sourceSet sourceSets.main
+            }
         }
     }
 
-    mods {
-        "${mod_id}" {
-            sourceSet sourceSets.main
+    // 1.20.x runs on SRG names, so the mixins need a refmap
+    mixin {
+        add sourceSets.main, refmap
+        config mixinConfigs
+    }
+
+    dependencies {
+        annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+        // NeoForge 47.1 does not ship MixinExtras, so the jar carries it
+        compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${mixinextras_version}"))
+        implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextras_version}"))
+    }
+
+    processResources {
+        def mcParts = mc_version.tokenize('.')
+        def nextMinecraft = (mcParts.take(mcParts.size() - 1) + [(mcParts.last() as int) + 1]).join('.')
+        // "1.20.1-47.1.106" -> "47"
+        def forgeProps = [forge_major: neoforge_version.tokenize('-')[1].tokenize('.')[0], forge_mc_range: "[${mc_version},${nextMinecraft})"]
+        inputs.properties(forgeProps)
+        filesMatching('META-INF/mods.toml') {
+            expand(forgeProps + [version: project.version.toString(), mod_id: mod_id, mod_name: mod_name, mod_author: mod_author,
+                                 mod_description: mod_description, license: license])
+        }
+        // Point the mixin config at the refmap the annotation processor writes
+        filesMatching(mixinConfigs) {
+            filter { it.replace('"package":', "\"refmap\": \"${refmap}\",\n\t\"package\":") }
+        }
+    }
+
+    jar {
+        // Forge finds the mixin configs through the manifest
+        manifest {
+            attributes 'MixinConfigs': mixinConfigs
+        }
+    }
+} else {
+    neoForge {
+        version = neoforge_version
+
+        runs {
+            client {
+                client()
+                gameDirectory = file('runs/client')
+            }
+            server {
+                server()
+                gameDirectory = file('runs/server')
+                programArgument '--nogui'
+            }
+        }
+
+        mods {
+            "${mod_id}" {
+                sourceSet sourceSets.main
+            }
         }
     }
 }
