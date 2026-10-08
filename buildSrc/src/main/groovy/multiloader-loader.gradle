@@ -17,3 +17,11 @@ tasks.named('compileJava', JavaCompile) {
 processResources {
     from(common.sourceSets.main.resources)
 }
+
+jar {
+    // Names the loader the jar was built for. NeoForge for 1.20.x builds from the Forge sources, so without this its jar
+    // would be identical to the Forge one (and CurseForge rejects identical files as duplicates).
+    manifest {
+        attributes 'Built-For-Loader': project.name
+    }
+}
