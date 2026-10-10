@@ -147,3 +147,8 @@ build runs the unit tests (`Common/src/test`). Two longer runs are separate:
 
 `calibrate` simulates 30 in-game days per scenario and prints how often it rains and thunders by biome, simulation
 interval and player count; `benchmark` prints simulation timings under load.
+
+## License
+
+[PolyForm Shield 1.0.0](LICENSE): you may use, modify and share Stormcell, including on servers and in modpacks,
+except to make a product that competes with it. Versions released before this change remain available under MIT.
