@@ -15,7 +15,7 @@ if (generation == 'mc20') {
 if (generation == 'mc20') {
     def forgeModule = rootProject.file('Forge/src')
     sourceSets.main.java.srcDirs = [new File(forgeModule, 'mc20/java')]
-    sourceSets.main.resources.srcDirs = [new File(forgeModule, 'main/resources')]
+    sourceSets.main.resources.srcDirs = [new File(forgeModule, 'main/resources'), new File(forgeModule, 'mc20/resources')]
 
     // The shared mixins only: the bed checks are Forge events here (see StormcellForge)
     def mixinConfigs = "${mod_id}.mixins.json"
