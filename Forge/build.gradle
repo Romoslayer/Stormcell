@@ -29,6 +29,11 @@ if (generation == 'mc20') {
             client {
                 client()
                 gameDirectory = file('runs/client')
+                // -PquickPlay=<world>: open that single-player world straight away
+                if (project.hasProperty('quickPlay')) {
+                    programArgument '--quickPlaySingleplayer'
+                    programArgument(project.property('quickPlay') as String)
+                }
             }
             server {
                 server()
@@ -67,6 +72,10 @@ if (generation == 'mc20') {
             }
             register('client') {
                 workingDir = layout.projectDirectory.dir('runs/client')
+                // -PquickPlay=<world>: open that single-player world straight away
+                if (project.hasProperty('quickPlay')) {
+                    args '--quickPlaySingleplayer', project.property('quickPlay') as String
+                }
             }
             register('server') {
                 workingDir = layout.projectDirectory.dir('runs/server')
