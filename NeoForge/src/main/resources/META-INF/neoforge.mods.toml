@@ -7,7 +7,7 @@ modId = "${mod_id}"
 version = "${version}"
 displayName = "${mod_name}"
 authors = "${mod_author}"
-logoFile = "assets/${mod_id}/icon.png"
+${neoforge_icon_key} = "assets/${mod_id}/icon.png"
 # Server-side only: players without the mod can join
 displayTest = "IGNORE_SERVER_VERSION"
 description = '''
