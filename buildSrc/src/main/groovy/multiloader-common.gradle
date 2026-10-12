@@ -75,7 +75,9 @@ processResources {
             java_version         : java_version,
             // NeoForge 26.x deprecates logoFile (a client then opens on a "mods loaded with warnings" screen); the
             // square icon is iconFile there. NeoForge 21.1 (1.21.1) only knows logoFile.
-            neoforge_icon_key    : generation == 'mc26' ? 'iconFile' : 'logoFile'
+            neoforge_icon_key    : generation == 'mc26' ? 'iconFile' : 'logoFile',
+            // Forge 26.x pack.mcmeta (min/max_format); the 1.20.x and 1.21.x ones are fixed files
+            pack_format          : project.findProperty('pack_format') ?: ''
     ]
     inputs.properties(expandProps)
     filesMatching(['META-INF/neoforge.mods.toml', 'fabric.mod.json', 'pack.mcmeta']) {
